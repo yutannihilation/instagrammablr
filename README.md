@@ -106,13 +106,13 @@ b$Network$setCookies(cookies = cookies$cookies)
 #> named list()
 b$Page$navigate("https://www.instagram.com/accounts/login/")
 #> $frameId
-#> [1] "9AC28086CC350F17D1D836D6D1712B78"
+#> [1] "7FE8413EE0B65E30C24F19CD1CEB209E"
 #> 
 #> $loaderId
-#> [1] "DC6D19D62B13128AD8B7165E67318C66"
+#> [1] "BECEA54D479C5AC962BFC73CC0554139"
 b$Page$loadEventFired()
 #> $timestamp
-#> [1] 10496.09
+#> [1] 13173.72
 
 b$screenshot(filename = "screenshot.png")
 #> [1] "screenshot.png"
@@ -134,11 +134,29 @@ root <- b$DOM$getDocument()$root$nodeId
 file_inputs <- b$DOM$querySelectorAll(root, "form input")
 b$DOM$setFileInputFiles(list(tmp), file_inputs$nodeIds[[length(file_inputs$nodeIds)]])
 
-# How can I push the next button...?
+# tap "Next"
 root <- b$DOM$getDocument()$root$nodeId
 buttons <- b$DOM$querySelectorAll(root, "button")
 is_next <- map_lgl(buttons$nodeIds, ~ stringr::str_detect(b$DOM$getOuterHTML(.), "Next"))
-buttons$nodeIds[[which(is_next)]]
+button <- b$DOM$getBoxModel(buttons$nodeIds[[which(is_next)]])
+b$Input$synthesizeTapGesture(x = button$model$content[[5]], y = button$model$content[[6]], duration = 1)
+
+# Add text
+root <- b$DOM$getDocument()$root$nodeId
+textareas <- b$DOM$querySelectorAll(root, "textarea")
+is_caption <- map_lgl(textareas$nodeIds, ~ "Write a caption…" %in% b$DOM$getAttributes(.)$attributes)
+caption <- b$DOM$getBoxModel(textareas$nodeIds[[which(is_caption)]])
+# move focus to text area
+b$Input$synthesizeTapGesture(x = caption$model$content[[5]], y = caption$model$content[[6]], duration = 1)
+# insert text
+b$Input$insertText("This post is posted from RStudio")
+
+# tap "Share"
+root <- b$DOM$getDocument()$root$nodeId
+buttons <- b$DOM$querySelectorAll(root, "button")
+is_share <- map_lgl(buttons$nodeIds, ~ stringr::str_detect(b$DOM$getOuterHTML(.), "Share"))
+button <- b$DOM$getBoxModel(buttons$nodeIds[[which(is_share)]])
+b$Input$synthesizeTapGesture(x = button$model$content[[5]], y = button$model$content[[6]], duration = 1)
 ```
 
 ## End
