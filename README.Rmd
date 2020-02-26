@@ -97,6 +97,8 @@ b$Page$loadEventFired()
 
 b$screenshot(filename = "screenshot.png")
 ```
+![](screenshot.png)
+
 
 ## Post a plot
 

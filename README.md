@@ -106,17 +106,19 @@ b$Network$setCookies(cookies = cookies$cookies)
 #> named list()
 b$Page$navigate("https://www.instagram.com/accounts/login/")
 #> $frameId
-#> [1] "9414285CF7DA850DBBE8E197A8D849C5"
+#> [1] "9AC28086CC350F17D1D836D6D1712B78"
 #> 
 #> $loaderId
-#> [1] "BF3FCF913334B8AFC9DD18F5454DDB55"
+#> [1] "DC6D19D62B13128AD8B7165E67318C66"
 b$Page$loadEventFired()
 #> $timestamp
-#> [1] 10331.95
+#> [1] 10496.09
 
 b$screenshot(filename = "screenshot.png")
 #> [1] "screenshot.png"
 ```
+
+![](screenshot.png)
 
 ## Post a plot
 
