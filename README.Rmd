@@ -1,0 +1,126 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Post R plot to Instagram on RStudio (or on whatever editor)
+
+## Install chromote
+
+* chromote: <https://github.com/rstudio/chromote>
+
+```{r install-chromote, eval=FALSE}
+devtools::install_github("rstudio/chromote")
+```
+
+### (Linux only?) Set `CHROMOTE_CHROME`
+
+I use Manjaro Linux, so I needed to set this by myself.
+
+```{r set-envvar, eval=FALSE}
+Sys.setenv(CHROMOTE_CHROME="/usr/bin/chromium")
+```
+
+### Confirm chromote works
+
+```{r confirm}
+library(chromote)
+
+b <- ChromoteSession$new()
+b$Browser$getVersion()
+```
+
+## Get device profiles
+
+The profiles of mobile devices are available on `front_end/emulated_devices/module.json` of [`ChromeDevTools/devtools-frontend` repository](https://github.com/ChromeDevTools/devtools-frontend).
+
+c.f. <https://github.com/mafredri/cdp/issues/93#issuecomment-486683596>
+
+```{r download-json, eval=!file.exists("data/module.json")}
+dir.create("data", showWarnings = FALSE)
+download.file(
+  "https://raw.githubusercontent.com/ChromeDevTools/devtools-frontend/master/front_end/emulated_devices/module.json",
+  destfile = "data/module.json"
+)
+```
+
+```{r process-json}
+library(purrr)
+
+j <- jsonlite::read_json("data/module.json")
+
+idx <- map_chr(j$extensions, "type") == "emulated-device"
+j <- map(j$extensions, "device")[idx]
+names(j) <- map_chr(j, "title")
+```
+
+## Set up emulation
+
+```{r emulation}
+device <- j$`iPhone 6/7/8 Plus`
+orientation <- "vertical" # can choose vertical or horizontal
+
+b$Emulation$setUserAgentOverride(userAgent = device$`user-agent`)
+b$Emulation$setDeviceMetricsOverride(
+  deviceScaleFactor = device$screen$`device-pixel-ratio`,
+  width = device$screen[[orientation]]$width,
+  height = device$screen[[orientation]]$height,
+  mobile = TRUE
+)
+```
+
+## Login
+
+```{r save-cookie, eval=FALSE}
+b$Page$navigate("https://www.instagram.com/accounts/login/")
+
+b$view()
+# (Manually log in)
+
+cookies <- b$Network$getCookies()
+saveRDS(cookies, "data/cookies.rds")
+```
+
+```{r login}
+cookies <- readRDS("data/cookies.rds")
+b$Network$setCookies(cookies = cookies$cookies)
+b$Page$navigate("https://www.instagram.com/accounts/login/")
+b$Page$loadEventFired()
+
+b$screenshot(filename = "screenshot.png")
+```
+
+## Post a plot
+
+```{r plot, eval=FALSE}
+library(ggplot2)
+p <- ggplot(mpg, aes(cyl, hwy)) +
+  geom_jitter(aes(colour = class))
+tmp <- tempfile(fileext = ".jpg")
+ggsave(p, filename = tmp)
+
+# insert file
+root <- b$DOM$getDocument()$root$nodeId
+file_inputs <- b$DOM$querySelectorAll(root, "form input")
+b$DOM$setFileInputFiles(list(tmp), file_inputs$nodeIds[[length(file_inputs$nodeIds)]])
+
+# How can I push the next button...?
+root <- b$DOM$getDocument()$root$nodeId
+buttons <- b$DOM$querySelectorAll(root, "button")
+is_next <- map_lgl(buttons$nodeIds, ~ stringr::str_detect(b$DOM$getOuterHTML(.), "Next"))
+buttons$nodeIds[[which(is_next)]]
+```
+
+## End
+
+```{r close}
+b$close()
+```
