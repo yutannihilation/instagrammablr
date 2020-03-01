@@ -32,16 +32,16 @@ b$Browser$getVersion()
 #> [1] "1.3"
 #> 
 #> $product
-#> [1] "HeadlessChrome/80.0.3987.87"
+#> [1] "HeadlessChrome/80.0.3987.122"
 #> 
 #> $revision
-#> [1] "@449cb163497b70dbf98d389f54e38e85d4c59b43"
+#> [1] "@cf72c4c4f7db75bc3da689cd76513962d31c7b52"
 #> 
 #> $userAgent
-#> [1] "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/80.0.3987.87 Safari/537.36"
+#> [1] "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/80.0.3987.122 Safari/537.36"
 #> 
 #> $jsVersion
-#> [1] "8.0.426.16"
+#> [1] "8.0.426.25"
 ```
 
 ## Get device profiles
@@ -74,7 +74,7 @@ names(j) <- map_chr(j, "title")
 ## Set up emulation
 
 ``` r
-device <- j$`iPhone 6/7/8 Plus`
+device <- j$`Nexus 5X`
 orientation <- "vertical" # can choose vertical or horizontal
 
 b$Emulation$setUserAgentOverride(userAgent = device$`user-agent`)
@@ -104,42 +104,84 @@ saveRDS(cookies, "data/cookies.rds")
 cookies <- readRDS("data/cookies.rds")
 b$Network$setCookies(cookies = cookies$cookies)
 #> named list()
-b$Page$navigate("https://www.instagram.com/accounts/login/")
+
+b$Page$navigate("https://example.com/")
 #> $frameId
-#> [1] "7FE8413EE0B65E30C24F19CD1CEB209E"
+#> [1] "D920E371A4CC169BD4DE4399827699ED"
 #> 
 #> $loaderId
-#> [1] "BECEA54D479C5AC962BFC73CC0554139"
-b$Page$loadEventFired()
-#> $timestamp
-#> [1] 13173.72
+#> [1] "AAE92BFD04149CE214F9698295DC248C"
 
-b$screenshot(filename = "screenshot.png")
-#> [1] "screenshot.png"
+p <- b$Page$navigate("https://www.instagram.com/", wait_ = FALSE)$
+  then(function(value) {
+    b$Page$loadEventFired(wait_ = FALSE)
+  })
+
+b$wait_for(p)
+#> $timestamp
+#> [1] 5847.551
+
+screenshot_tmp <- tempfile(fileext = ".png")
+b$screenshot(filename = screenshot_tmp)
+#> [1] "/tmp/RtmpqgWpq5/file245d604c4f4.png"
+
+knitr::include_graphics(screenshot_tmp)
 ```
 
-![](screenshot.png)
+<img src="/tmp/RtmpqgWpq5/file245d604c4f4.png" width="300px" />
 
 ## Post a plot
 
+(This chunk is not executed because I don’t want to post the same plot
+thousands of times…)
+
 ``` r
 library(ggplot2)
-p <- ggplot(mpg, aes(cyl, hwy)) +
-  geom_jitter(aes(colour = class))
+
+p <- ggplot(mtcars, aes(factor(cyl), mpg)) +
+  geom_violin(aes(fill = factor(cyl)))
 tmp <- tempfile(fileext = ".jpg")
 ggsave(p, filename = tmp)
 
+# content is a Quad object:
+# "An array of quad vertices, x immediately followed by y for each point, points clock-wise."
+calc_center_of_content <- function(content) {
+  list(
+    x = (content[[1]] + content[[3]]) / 2,
+    y = (content[[2]] + content[[8]]) / 2
+  )
+}
+
 # insert file
+# need to click + button to pretend as a human
+root <- b$DOM$getDocument()$root$nodeId
+divs <- b$DOM$querySelectorAll(root, "nav div")
+is_plus <- map_lgl(divs$nodeIds, ~ "new-post-button" %in% b$DOM$getAttributes(.)$attributes)
+plus_button <- b$DOM$getBoxModel(divs$nodeIds[[which(is_plus)]])
+ctr <- calc_center_of_content(plus_button$model$content)
+b$Input$synthesizeTapGesture(x = ctr$x, y = ctr$y)
+
+Sys.sleep(1)
+
 root <- b$DOM$getDocument()$root$nodeId
 file_inputs <- b$DOM$querySelectorAll(root, "form input")
-b$DOM$setFileInputFiles(list(tmp), file_inputs$nodeIds[[length(file_inputs$nodeIds)]])
+length(file_inputs$nodeIds)
+b$DOM$setFileInputFiles(
+  list(tmp),
+  file_inputs$nodeIds[[length(file_inputs$nodeIds)]]
+)
+
+Sys.sleep(1)
 
 # tap "Next"
 root <- b$DOM$getDocument()$root$nodeId
 buttons <- b$DOM$querySelectorAll(root, "button")
 is_next <- map_lgl(buttons$nodeIds, ~ stringr::str_detect(b$DOM$getOuterHTML(.), "Next"))
 button <- b$DOM$getBoxModel(buttons$nodeIds[[which(is_next)]])
-b$Input$synthesizeTapGesture(x = button$model$content[[5]], y = button$model$content[[6]], duration = 1)
+ctr <- calc_center_of_content(button$model$content)
+b$Input$synthesizeTapGesture(x = ctr$x, y = ctr$y)
+
+Sys.sleep(1)
 
 # Add text
 root <- b$DOM$getDocument()$root$nodeId
@@ -147,16 +189,20 @@ textareas <- b$DOM$querySelectorAll(root, "textarea")
 is_caption <- map_lgl(textareas$nodeIds, ~ "Write a caption…" %in% b$DOM$getAttributes(.)$attributes)
 caption <- b$DOM$getBoxModel(textareas$nodeIds[[which(is_caption)]])
 # move focus to text area
-b$Input$synthesizeTapGesture(x = caption$model$content[[5]], y = caption$model$content[[6]], duration = 1)
+ctr <- calc_center_of_content(caption$model$content)
+b$Input$synthesizeTapGesture(x = ctr$x, y = ctr$y)
 # insert text
 b$Input$insertText("This post is posted from RStudio")
+
+Sys.sleep(1)
 
 # tap "Share"
 root <- b$DOM$getDocument()$root$nodeId
 buttons <- b$DOM$querySelectorAll(root, "button")
 is_share <- map_lgl(buttons$nodeIds, ~ stringr::str_detect(b$DOM$getOuterHTML(.), "Share"))
 button <- b$DOM$getBoxModel(buttons$nodeIds[[which(is_share)]])
-b$Input$synthesizeTapGesture(x = button$model$content[[5]], y = button$model$content[[6]], duration = 1)
+ctr <- calc_center_of_content(button$model$content)
+b$Input$synthesizeTapGesture(x = ctr$x, y = ctr$y)
 ```
 
 ## End
