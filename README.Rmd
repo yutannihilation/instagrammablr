@@ -26,6 +26,7 @@ devtools::install_github("rstudio/chromote")
 I use Manjaro Linux, so I needed to set this by myself.
 
 ```{r set-envvar}
+# TODO: remove this after https://github.com/rstudio/chromote/pull/27 gets merged
 Sys.setenv(CHROMOTE_CHROME="/usr/bin/chromium")
 ```
 
@@ -93,8 +94,6 @@ saveRDS(cookies, "data/cookies.rds")
 cookies <- readRDS("data/cookies.rds")
 b$Network$setCookies(cookies = cookies$cookies)
 
-b$Page$navigate("https://example.com/")
-
 p <- b$Page$navigate("https://www.instagram.com/", wait_ = FALSE)$
   then(function(value) {
     b$Page$loadEventFired(wait_ = FALSE)
@@ -102,11 +101,10 @@ p <- b$Page$navigate("https://www.instagram.com/", wait_ = FALSE)$
 
 b$wait_for(p)
 
-screenshot_tmp <- tempfile(fileext = ".png")
-b$screenshot(filename = screenshot_tmp)
-
-knitr::include_graphics(screenshot_tmp)
+b$screenshot(filename = "screenshot.png")
+knitr::include_graphics("screenshot.png")
 ```
+
 
 ## Post a plot
 

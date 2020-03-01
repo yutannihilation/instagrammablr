@@ -18,6 +18,7 @@ devtools::install_github("rstudio/chromote")
 I use Manjaro Linux, so I needed to set this by myself.
 
 ``` r
+# TODO: remove this after https://github.com/rstudio/chromote/pull/27 gets merged
 Sys.setenv(CHROMOTE_CHROME="/usr/bin/chromium")
 ```
 
@@ -105,13 +106,6 @@ cookies <- readRDS("data/cookies.rds")
 b$Network$setCookies(cookies = cookies$cookies)
 #> named list()
 
-b$Page$navigate("https://example.com/")
-#> $frameId
-#> [1] "D920E371A4CC169BD4DE4399827699ED"
-#> 
-#> $loaderId
-#> [1] "AAE92BFD04149CE214F9698295DC248C"
-
 p <- b$Page$navigate("https://www.instagram.com/", wait_ = FALSE)$
   then(function(value) {
     b$Page$loadEventFired(wait_ = FALSE)
@@ -119,16 +113,14 @@ p <- b$Page$navigate("https://www.instagram.com/", wait_ = FALSE)$
 
 b$wait_for(p)
 #> $timestamp
-#> [1] 5847.551
+#> [1] 10203.46
 
-screenshot_tmp <- tempfile(fileext = ".png")
-b$screenshot(filename = screenshot_tmp)
-#> [1] "/tmp/RtmpqgWpq5/file245d604c4f4.png"
-
-knitr::include_graphics(screenshot_tmp)
+b$screenshot(filename = "screenshot.png")
+#> [1] "screenshot.png"
+knitr::include_graphics("screenshot.png")
 ```
 
-<img src="/tmp/RtmpqgWpq5/file245d604c4f4.png" width="300px" />
+<img src="screenshot.png" width="300px" />
 
 ## Post a plot
 
